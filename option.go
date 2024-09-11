@@ -45,8 +45,7 @@ func None[T any]() Option[T] {
 	}
 }
 
-// JsonNull is a function to make an Option type value that has an explicit null
-// value.
+// JsonNull is a function to make an Option type value that has an explicit null value.
 func JsonNull[T any]() Option[T] {
 	return Option[T]{
 		state: NullState,
@@ -265,8 +264,7 @@ func (o Option[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(o.value)
 }
 
-// UnmarshalJSON implements the json.Unmarshaler interface for custom JSON
-// decoding.
+// UnmarshalJSON implements the json.Unmarshaler interface for custom JSON decoding.
 func (o *Option[T]) UnmarshalJSON(data []byte) error {
 	if len(data) <= 0 {
 		*o = None[T]()
