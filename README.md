@@ -1,96 +1,128 @@
-# JSON-Go-Optional
+# `jsonoptional` Package
 
-The `optional` package provides a generic `Option` type for Go, enabling representation of values that may or may not be present (Some, None, or JsonNull). This package is useful in scenarios where you want to handle optional values without resorting to pointers, and when you need to explicitly differentiate between "no value" and "null."
+The `jsonoptional` package provides a way to handle values that can be present (Some), omitted (None), or explicitly set to null (Null) in a type-safe manner. This is particularly useful when working with JSON data and APIs where fields can be optional or nullable. The package builds on the idea of optional values, allowing for better control and clarity when dealing with nullable or optional fields in Go structures.
 
 ## Features
 
-- **Generic Option Type**: Create `Option` types for any value, allowing flexibility for optional values.
-- **Three States**:
-  - **Some**: Represents an existing non-null value.
-  - **None**: Represents the absence of a value (field omitted).
-  - **JsonNull**: Represents an explicit null value.
-- **Database Integration**: Implements `database/sql/driver.Valuer` and `database/sql.Scanner` for database compatibility.
-- **JSON Support**: Implements `json.Marshaler` and `json.Unmarshaler` for proper handling of JSON encoding and decoding.
+- **Optional Values**: Define values as either Some, None, or Null.
+- **Generic Types**: Supports any type, including custom types and structs.
+- **JSON Serialization/Deserialization**: Automatically handles marshalling and unmarshalling optional fields in JSON, allowing null values to be explicitly represented.
+- **Helper Functions**: Includes utility functions to wrap values, extract values, and handle optionality gracefully.
+
+## Installation
+
+To install this package, use:
+
+```bash
+go get github.com/tapp-ai/jsonoptional
+```
 
 ## Usage
 
-### Basic Example
+### Defining an Optional Value
+
+To create an optional value, use the `Some`, `None`, or `Null` constructors:
 
 ```go
-package main
+import "github.com/tapp-ai/jsonoptional"
 
-import (
-	"fmt"
-	"optional"
-)
+// Some value (non-null)
+opt := jsonoptional.Some(42)
 
-func main() {
-	// Create an Option with a value
-	opt := optional.Some(42)
-	if opt.IsSome() {
-		fmt.Println("Value:", opt.Unwrap())
-	}
+// No value (None)
+optNone := jsonoptional.None[int]()
 
-	// Create a None Option
-	noneOpt := optional.None[int]()
-	if noneOpt.IsNone() {
-		fmt.Println("No value present.")
-	}
+// Explicit null value
+optNull := jsonoptional.Null[int]()
 
-	// Create a JsonNull Option
-	jsonNullOpt := optional.JsonNull[int]()
-	if jsonNullOpt.IsJsonNull() {
-		fmt.Println("Explicitly null value.")
-	}
+// Explicity null value when a condition is met
+optNullIf := jsonoptional.NullIf(42, true)
+```
+
+A particularly useful feature of this package is the `NullIf` function, which allows you to create an optional value that is null if a condition is met:
+
+```go
+var t := time.Time{}
+optTime := jsonoptional.NullIf(t, t.IsZero())
+fmt.Println(optTime.IsNull()) // true
+```
+
+### Checking the Value
+
+You can check the state of an optional value using the following methods:
+
+```go
+if opt.IsSome() {
+    fmt.Println("Value exists:", opt.Unwrap())
+}
+
+if optNone.IsNone() {
+    fmt.Println("No value present")
+}
+
+if optNull.IsNull() {
+    fmt.Println("Value is explicitly null")
 }
 ```
 
-### Common Methods
+### Unwrapping the Value
 
-- `Some(value)`: Wraps a value into an `Option`.
-- `None()`: Represents an absent value.
-- `JsonNull()`: Represents a `null` value in JSON.
-- `Unwrap()`: Extracts the value, returning the zero value of the type if `None` or `JsonNull`.
-- `Take()`: Extracts the value and returns an error if `None` or `JsonNull`.
-- `TakeOr(fallback)`: Returns the value or a fallback if `None` or `JsonNull`.
-- `Filter(predicate)`: Filters the value if it matches a condition.
-- `MarshalJSON()` / `UnmarshalJSON()`: Encodes and decodes optional values in JSON.
-
-### JSON Example
+You can unwrap the value from the `Option`, but if the value is `None` or `Null`, you will receive the default value of the type:
 
 ```go
-package main
+val := opt.Unwrap() // Returns 42
+valNone := optNone.Unwrap() // Returns default value (0 for int)
+valNull := optNull.Unwrap() // Returns default value (0 for int)
+```
 
-import (
-	"encoding/json"
-	"fmt"
-	"optional"
-)
+### Fallback Values
 
-func main() {
-	opt := optional.Some("hello")
-	data, _ := json.Marshal(opt)
-	fmt.Println(string(data)) // Output: "hello"
+If you want to provide a fallback in case of `None`, you can use `TakeOr` or `TakeOrElse`:
 
-	noneOpt := optional.None[string]()
-	data, _ = json.Marshal(noneOpt)
-	fmt.Println(string(data)) // Output: nothing (field is omitted)
+```go
+fallback := optNone.TakeOr(100) // Returns 100 since optNone is None
+fallbackElse := optNone.TakeOrElse(func() int { return 200 }) // Returns 200 from the fallback function
+```
 
-	jsonNullOpt := optional.JsonNull[string]()
-	data, _ = json.Marshal(jsonNullOpt)
-	fmt.Println(string(data)) // Output: null
+### JSON Marshalling and Unmarshalling
+
+`Option` values can be automatically marshalled and unmarshalled to/from JSON:
+
+```go
+type Example struct {
+    Value jsonoptional.Option[int] `json:"value,omitempty"`
 }
+
+example := Example{
+    Value: jsonoptional.Some(42),
+}
+
+jsonData, _ := json.Marshal(example)
+fmt.Println(string(jsonData)) // {"value":42}
+
+var exampleNull Example
+json.Unmarshal([]byte(`{"value":null}`), &exampleNull)
+fmt.Println(exampleNull.Value.IsNull()) // true
+```
+
+### Converting to Standard Optional
+
+You can convert the `jsonoptional.Option` to the standard `optional.Option` provided by the `go-optional` package:
+
+```go
+standardOpt := opt.ToOptional()
 ```
 
 ## Error Handling
 
-- **ErrNoneValueTaken**: Error returned when attempting to extract a value from `None` or `JsonNull`.
+If attempting to retrieve a value from a `None` type, you can handle errors gracefully:
 
-## Use Cases
-
-- **Database Fields**: Handling optional database fields with clear semantics for null and omitted fields.
-- **APIs**: Managing optional values in API responses without using pointers.
-- **Configuration Settings**: Handling optional configuration values in JSON or other structured data formats.
+```go
+val, err := optNone.Take()
+if err != nil {
+    fmt.Println("Error:", err) // "none value taken"
+}
+```
 
 ## License
 
