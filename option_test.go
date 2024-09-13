@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tapp-ai/json-go-optional/jsonoptional"
+	jsonoptional "github.com/tapp-ai/json-go-optional"
 )
 
 type TestRequest struct {
