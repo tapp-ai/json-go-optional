@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/tapp-ai/go-optional"
 )
 
 var (
@@ -250,6 +252,18 @@ func (o Option[T]) String() string {
 		return fmt.Sprintf("Null[%v]", v)
 	}
 	return fmt.Sprintf("Some[%v]", v)
+}
+
+// ToOptional is a function to convert the JSON optional to the standard optional.
+// If the JSON optional is Some, the standard optional is Some with the actual value.
+// If the JSON optional is Null, the standard optional is Some with the default value.
+// If the JSON optional is None, the standard optional is None.
+func (o Option[T]) ToOptional() optional.Option[T] {
+	if o.IsNone() {
+		return optional.None[T]()
+	}
+
+	return optional.Some(o.Unwrap())
 }
 
 // MarshalJSON implements the json.Marshaler interface for Option.
