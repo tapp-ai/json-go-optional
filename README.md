@@ -1,4 +1,4 @@
-# `jsonoptional` Package
+# `jsonoptional`
 
 The `jsonoptional` package provides a way to handle values that can be present (Some), omitted (None), or explicitly set to null (Null) in a type-safe manner. This is particularly useful when working with JSON data and APIs where fields can be optional or nullable. The package builds on the idea of optional values, allowing for better control and clarity when dealing with nullable or optional fields in Go structures.
 
